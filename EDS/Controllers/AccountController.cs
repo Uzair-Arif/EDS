@@ -1,5 +1,6 @@
 ﻿using EDS.Api.ApiModels.UserAccountModels;
 using EDS.Domain.Models;
+using EDS.Security;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -19,12 +20,14 @@ namespace EDS.Api.Controllers
 
         private readonly UserManager<IdentityUser> userManager;
         private readonly SignInManager<IdentityUser> signInManager;
+        private readonly IJWTAuthenticationManager jWTAuthenticationManager;
 
         public AccountController(UserManager<IdentityUser> userManager,
-            SignInManager<IdentityUser> signInManager)
+            SignInManager<IdentityUser> signInManager, IJWTAuthenticationManager jWTAuthenticationManager)
         {
             this.userManager = userManager;
             this.signInManager = signInManager;
+            this.jWTAuthenticationManager = jWTAuthenticationManager;
         }
 
         // GET: api/<AccountController>
@@ -98,15 +101,21 @@ namespace EDS.Api.Controllers
         {
             if (ModelState.IsValid)
             {
-                var result = await signInManager.PasswordSignInAsync(
-                    model.Email, model.Password, model.RememberMe, false);
 
-                if (result.Succeeded)
+                var token=jWTAuthenticationManager.Authenticate(model.Email, model.Password,model.RememberMe);
+
+                if (token == null) 
                 {
-                    return  new BaseModel { data = "null", message = "Authenticated", success = true };
+                    ModelState.AddModelError(string.Empty, "Invalid Login Attempt");
+                    return new BaseModel { success = false, data = null, message = "Login Failed" };
                 }
+                
 
-                ModelState.AddModelError(string.Empty, "Invalid Login Attempt");
+                else 
+                {
+                    return new BaseModel { success = true, data = token, message = "Login Success" };
+                }
+                    
             }
 
             return new BaseModel { success = false, data = null, message = "Invalid Data" };

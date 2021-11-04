@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\EDS.Infrastructure.Data\EDS.Infrastructure.Data.csproj" />
+    <ProjectReference Include="..\EDS.Security\EDS.Security.csproj" />
   </ItemGroup>
 
 
