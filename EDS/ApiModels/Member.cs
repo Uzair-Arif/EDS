@@ -48,6 +48,8 @@ namespace EDS.Api.ApiModels
 
         public string Headings { get; set; }
 
-        public List<string> Links { get; set; }
+        public List<Tuple<int,string, string>> Links = new List<Tuple<int,string, string>>();
+
+        //public List<string> Links { get; set; } = new List<string>();
     }
 }

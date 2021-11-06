@@ -23,13 +23,40 @@ namespace EDS.Infrastructure.Data.Repositories
             this._context = _context;
             table = _context.Set<T>();
         }
-        public async Task<IEnumerable<T>> GetAll()
+        public async Task<IEnumerable<T>> GetAllAsync()
         {
             return await table.ToListAsync();
         }
-        public async Task<T> GetById(object id)
+
+
+        public IQueryable<T> GetAll()
+        {
+            return _context.Set<T>();
+        }
+
+        
+        //public async Task<IQueryable<T>> GetAllIncluding(params Expression<Func<T, object>>[] includeProperties)
+        //{
+
+        //    IQueryable<T> queryable = await GetAll(;
+        //    foreach (Expression<Func<T, object>> includeProperty in includeProperties)
+        //    {
+
+        //        queryable = queryable.Include<T, object>(includeProperty);
+        //    }
+
+        //    return queryable;
+        //}
+
+
+        public async Task<T> GetByIdAsync(object id)
         {
             return await table.FindAsync(id);
+        }
+
+        public T GetById(object id)
+        {
+            return _context.Set<T>().Find(id);
         }
         public async Task<T> Insert(T obj)
         {

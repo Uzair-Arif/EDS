@@ -30,12 +30,12 @@ namespace EM.Infrastructure.Data
 
             modelBuilder.Entity<Friend>()
                 .HasOne(f => f.Member1)
-                .WithMany()
+                .WithMany(f=>f.MemberFriends)
                 .HasForeignKey(f => f.Member1Id).OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Friend>()
                 .HasOne(f => f.Member2)
-                .WithMany()
+                .WithMany(f=>f.MemberFriendsOf)
                 .HasForeignKey(f => f.Member2Id);
 
             //Seed Data Department

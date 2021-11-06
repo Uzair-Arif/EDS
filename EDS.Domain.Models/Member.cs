@@ -18,6 +18,6 @@ namespace EDS.Domain.Models
 
         public virtual ICollection<Friend> MemberFriends { get; set; }
 
-        //public virtual ICollection<Friend> MemberFriendsOf { get; set; }
+        public virtual ICollection<Friend> MemberFriendsOf { get; set; }
     }
 }

@@ -10,6 +10,8 @@ using EM.Infrastructure.Data;
 using EDS.Core.Utilities;
 using EDS.Api.ApiModels;
 using EDS.Domain.Interfaces;
+using System.Collections.ObjectModel;
+using System.Text;
 
 namespace EDS.Api.Controllers
 {
@@ -19,10 +21,13 @@ namespace EDS.Api.Controllers
     {
         private readonly IGenericRepository<Domain.Models.Member> memberRepository = null;
         private readonly IGenericRepository<Friend> friendRepository = null;
+
+      
         public MembersController(IGenericRepository<Domain.Models.Member> memberRepository, IGenericRepository<Friend> friendRepository)
         {
             this.memberRepository = memberRepository;
             this.friendRepository = friendRepository;
+          
        
         }
 
@@ -32,12 +37,16 @@ namespace EDS.Api.Controllers
         {
             try
             {
-                var allmembers = await memberRepository.GetAll();
+                //Get all members including friends
+                 var allmembers = memberRepository.GetAll().Include(x => x.MemberFriends).ThenInclude(e =>e.Member2).Include(e=>e.MemberFriendsOf).ThenInclude(e=>e.Member1).ToList();
+
+                //List to return from the call
                 var retMembers = new List<MemberWithFriendCount>();
                 
+                //Iterate to create return list with friends count
                 foreach (var member in allmembers)
                 {
-                    var retMembersToAdded = new MemberWithFriendCount { Name=member.Name, PersonalWebAddress=member.PersonalWebAddress , FriendCount=member.MemberFriends.Count };
+                    var retMembersToAdded = new MemberWithFriendCount { Id= member.Id, Name=member.Name, PersonalWebAddress=member.PersonalWebAddress , FriendCount=member.MemberFriends.Count };
 
                     retMembers.Add(retMembersToAdded);
                 }
@@ -61,84 +70,59 @@ namespace EDS.Api.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<BaseModel>> GetMember(int id)
         {
-            var member = await memberRepository.GetById(id);
+            try
+            {
 
+            // Get member with id including friends
+            var member = memberRepository.GetAll().Where(x=>x.Id==id).Include(x => x.MemberFriends).ThenInclude(e => e.Member2).Include(e => e.MemberFriendsOf).ThenInclude(e => e.Member1).FirstOrDefault();
+            
             if (member == null)
             {
                 return new BaseModel { success=false, message=" Member Not Found" };
             }
 
+            //Custom model to return friends pages links as well
             var retMember = new MemberWithFriendsPagesLinks { Name= member.Name, Headings=member.Headings, PersonalWebAddress= member.PersonalWebAddress };
 
-            var memberFriends = friendRepository.GetAll().Result.Where(x=>x.Member1Id==member.Id);
-
-            foreach (var memberFriend in memberFriends) 
+            //Iterate to generate list of tuples for all friends websites links
+            foreach (var memberFriend in member.MemberFriends)
             {
-                var webAddressLink = memberRepository.GetById(memberFriend.Member2Id).Result.PersonalWebAddress;
-                retMember.Links.Add(webAddressLink);
+
+                retMember.Links.Add(new Tuple<int,string, string>(memberFriend.Member2.Id,memberFriend.Member2.Name, memberFriend.Member2.PersonalWebAddress));
+          
             }
 
+            
+            
+            return new BaseModel { data = retMember, success=true  };
 
-            return new BaseModel { }; 
+
+            }
+            catch (Exception ex)
+            {
+                return new BaseModel { data = ex, success = false };
+            }
+            
 
         }
 
-        // PUT: api/Members/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for
-        // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutMember(int id, Domain.Models.Member member)
-        {
-            if (id != member.Id)
-            {
-                return BadRequest();
-            }
-
-           // _context.Entry(member).State = EntityState.Modified;
-
-            try
-            {
-              //  await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                //if (!MemberExists(id))
-                //{
-                //    return NotFound();
-                //}
-                //else
-                //{
-                //    throw;
-                //}
-            }
-
-            return NoContent();
-        }
-
-        // POST: api/Members
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for
-        // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
-        [HttpPost]
-        public async Task<ActionResult<Domain.Models.Member>> PostMember(Domain.Models.Member member)
-        {
-          //  _context.Members.Add(member);
-          //  await _context.SaveChangesAsync();
-
-            return CreatedAtAction("GetMember", new { id = member.Id }, member);
-        }
+        
 
        
-        //private bool MemberExists(int id)
-        //{
-        //   // return _context.Members.Any(e => e.Id == id);
-        //}
 
         [HttpPost("Create")]
         public async Task<BaseModel> Create(ApiModels.Member member)
         {
+
+            try
+            {
+
+            
             if (ModelState.IsValid)
             {
+                // Get heading for profile
                 var headings = WebScraping.GetHeadings(member.PersonalWebAddress);
+                
                 var newMember = new Domain.Models.Member
                 {
                     Name = member.Name,
@@ -156,10 +140,89 @@ namespace EDS.Api.Controllers
             {
                 return new BaseModel { data = null, message = "Invalid data", success = false };
             }
+            }
+            catch (Exception ex)
+            {
+                return new BaseModel { data=ex, success=false };
+            }
 
-            
+
         }
 
-       
+        [HttpGet("{id}/{topic}")]
+        public async Task<BaseModel> ExpertSearch(int id,string topic)
+        {
+            try
+            {
+
+            //Get all members who are not friends
+            var notFriends = friendRepository.GetAll().Where(x => x.Member1Id != id && x.Member2Id != id);
+                if (notFriends.Count() > 0) 
+                {
+                 
+                    StringBuilder sb = new StringBuilder();
+                    int experrtId = 0;
+                    string dispHeading = string.Empty;
+
+                    //Iterate all non-friend and find experts
+                    foreach (var notFriend in notFriends)
+                    {
+
+                        if (notFriend.Member1.Headings.Split(',').Contains(topic))
+                        {
+                            var headings = notFriend.Member1.Headings.Split(',');
+                            foreach (var heading in headings)
+                            {
+                                if (heading.Contains(topic))
+                                {
+                                    dispHeading = heading;
+
+                                    experrtId = notFriend.Member1.Id;
+                                }
+                               
+                                break;
+                            }
+                            break;
+                        }
+
+                    }
+                    //If expert exist with topic
+                    if (!string.IsNullOrEmpty(dispHeading)) 
+                    {
+                        var memberFriend = friendRepository.GetAll().Where(x => x.Member1Id == id && (x.Member2.MemberFriends.Any(x => x.Member2Id == experrtId)) == true).FirstOrDefault();
+                        var memberName = memberRepository.GetByIdAsync(id).Result.Name;
+                        var expertName = memberRepository.GetByIdAsync(experrtId).Result.Name;
+
+                        var retPath = sb.Append(memberName + "-->" + memberFriend.Member1.Name + "-->" + expertName + "(" + dispHeading + ")").ToString();
+                        return new BaseModel { data = retPath, message = "Path to topic expert", success = true };
+
+
+                    }
+                    else
+                    {
+                        return new BaseModel { message = "No expert available", success = false };
+                    }
+
+
+
+                }
+
+                else
+                {
+                    return new BaseModel { message="No other friends available", success=false };
+                }
+
+
+            }
+            catch (Exception ex)
+            {
+                return new BaseModel { data = ex, success = false };
+            }
+
+           
+           
+
+        }
+
     }
 }
