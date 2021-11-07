@@ -156,7 +156,7 @@ namespace EDS.Api.Controllers
             {
 
             //Get all members who are not friends
-            var notFriends = friendRepository.GetAll().Where(x => x.Member1Id != id && x.Member2Id != id);
+            var notFriends = friendRepository.GetAll().Include(x=>x.Member1).Include(x=>x.Member2).Where(x => x.Member1Id != id && x.Member2Id != id).ToList();
                 if (notFriends.Count() > 0) 
                 {
                  
@@ -186,6 +186,7 @@ namespace EDS.Api.Controllers
                         }
 
                     }
+
                     //If expert exist with topic
                     if (!string.IsNullOrEmpty(dispHeading)) 
                     {
@@ -193,7 +194,7 @@ namespace EDS.Api.Controllers
                         var memberName = memberRepository.GetByIdAsync(id).Result.Name;
                         var expertName = memberRepository.GetByIdAsync(experrtId).Result.Name;
 
-                        var retPath = sb.Append(memberName + "-->" + memberFriend.Member1.Name + "-->" + expertName + "(" + dispHeading + ")").ToString();
+                        var retPath = sb.Append(memberName + "-->" + memberFriend.Member2.Name + "-->" + expertName + "(" + dispHeading + ")").ToString();
                         return new BaseModel { data = retPath, message = "Path to topic expert", success = true };
 
 
@@ -202,9 +203,6 @@ namespace EDS.Api.Controllers
                     {
                         return new BaseModel { message = "No expert available", success = false };
                     }
-
-
-
                 }
 
                 else
@@ -218,11 +216,8 @@ namespace EDS.Api.Controllers
             {
                 return new BaseModel { data = ex, success = false };
             }
-
-           
-           
-
         }
+        
 
     }
 }
