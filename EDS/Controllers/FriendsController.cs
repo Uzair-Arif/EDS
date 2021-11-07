@@ -18,7 +18,7 @@ namespace EDS.Api.Controllers
     {
         private readonly IGenericRepository<Friend> friendRepository = null;
         public FriendsController(IGenericRepository<Friend> friendRepository)
-        { 
+        {
             this.friendRepository = friendRepository;
         }
 
@@ -30,47 +30,47 @@ namespace EDS.Api.Controllers
             try
             {
 
-            if (ModelState.IsValid)
-            {
-                //Adding two records for each friendship
-                //1st friendship
-                var newFriendship1 = new Domain.Models.Friend
+                if (ModelState.IsValid)
                 {
-                     Member1Id=friend.Member1Id,
-                     Member2Id = friend.Member2Id
-                    
-                };
-                //2nd friendship
-                var newFriendship2 = new Domain.Models.Friend
+                    //Adding two records for each friendship
+                    //1st friendship
+                    var newFriendship1 = new Domain.Models.Friend
+                    {
+                        Member1Id = friend.Member1Id,
+                        Member2Id = friend.Member2Id
+
+                    };
+                    //2nd friendship
+                    var newFriendship2 = new Domain.Models.Friend
+                    {
+                        Member1Id = friend.Member2Id,
+                        Member2Id = friend.Member1Id
+
+                    };
+
+
+                    var result1 = await friendRepository.Insert(newFriendship1);
+                    var result2 = await friendRepository.Insert(newFriendship2);
+
+                    var newFriendships = new List<Friend>();
+                    newFriendships.Add(result1);
+                    newFriendships.Add(result2);
+
+
+
+
+                    return new BaseModel { data = newFriendships, message = "Friendship Added", success = true };
+                }
+
+                else
                 {
-                    Member1Id = friend.Member2Id,
-                    Member2Id = friend.Member1Id
-
-                };
-
-
-                var result1 = await friendRepository.Insert(newFriendship1);
-                var result2= await friendRepository.Insert(newFriendship2);
-
-                var newFriendships = new List<Friend>();
-                newFriendships.Add(result1);
-                newFriendships.Add(result2);
-             
-              
-
-
-                return new BaseModel { data = newFriendships, message = "Friendship Added", success = true };
-            }
-
-            else
-            {
-                return new BaseModel { data = null, message = "Invalid data", success = false };
-            }
+                    return new BaseModel { data = null, message = "Invalid data", success = false };
+                }
             }
             catch (Exception ex)
             {
 
-                return new BaseModel { data=ex, success=false };
+                return new BaseModel { data = ex, success = false };
             }
 
         }

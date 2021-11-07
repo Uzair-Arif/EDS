@@ -25,7 +25,7 @@ namespace EDS
     {
 
         private readonly SignInManager<IdentityUser> signInManager;
-        public Startup(IConfiguration configuration)
+        public Startup(IConfiguration configuration, SignInManager<IdentityUser> signInManager)
         {
             Configuration = configuration;
             this.signInManager = signInManager;
@@ -41,7 +41,7 @@ namespace EDS
             services.AddScoped<IGenericRepository<Member>, GenericRepository<Member>>();
             services.AddScoped<IGenericRepository<Friend>, GenericRepository<Friend>>();
 
-            services.AddControllers().AddNewtonsoftJson(options =>options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
+            services.AddControllers().AddNewtonsoftJson(options => options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
 
             var tokenKey = Configuration.GetValue<string>("TokenKey");
             var key = Encoding.ASCII.GetBytes(tokenKey);

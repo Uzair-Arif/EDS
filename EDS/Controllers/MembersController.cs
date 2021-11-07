@@ -16,19 +16,19 @@ using System.Text;
 namespace EDS.Api.Controllers
 {
     [Route("api/[controller]")]
-   // [ApiController]
+    // [ApiController]
     public class MembersController : ControllerBase
     {
         private readonly IGenericRepository<Domain.Models.Member> memberRepository = null;
         private readonly IGenericRepository<Friend> friendRepository = null;
 
-      
+
         public MembersController(IGenericRepository<Domain.Models.Member> memberRepository, IGenericRepository<Friend> friendRepository)
         {
             this.memberRepository = memberRepository;
             this.friendRepository = friendRepository;
-          
-       
+
+
         }
 
         // GET: api/Members
@@ -38,23 +38,23 @@ namespace EDS.Api.Controllers
             try
             {
                 //Get all members including friends
-                 var allmembers = memberRepository.GetAll().Include(x => x.MemberFriends).ThenInclude(e =>e.Member2).Include(e=>e.MemberFriendsOf).ThenInclude(e=>e.Member1).ToList();
+                var allmembers = memberRepository.GetAll().Include(x => x.MemberFriends).ThenInclude(e => e.Member2).Include(e => e.MemberFriendsOf).ThenInclude(e => e.Member1).ToList();
 
                 //List to return from the call
                 var retMembers = new List<MemberWithFriendCount>();
-                
+
                 //Iterate to create return list with friends count
                 foreach (var member in allmembers)
                 {
-                    var retMembersToAdded = new MemberWithFriendCount { Id= member.Id, Name=member.Name, PersonalWebAddress=member.PersonalWebAddress , FriendCount=member.MemberFriends.Count };
+                    var retMembersToAdded = new MemberWithFriendCount { Id = member.Id, Name = member.Name, PersonalWebAddress = member.PersonalWebAddress, FriendCount = member.MemberFriends.Count };
 
                     retMembers.Add(retMembersToAdded);
                 }
 
 
-               if(retMembers.Count>0)
-                return new BaseModel { data=retMembers, message="Members List",success=true };
-               else
+                if (retMembers.Count > 0)
+                    return new BaseModel { data = retMembers, message = "Members List", success = true };
+                else
                     return new BaseModel { data = null, message = "No members found", success = false };
 
             }
@@ -62,7 +62,7 @@ namespace EDS.Api.Controllers
             catch (Exception ex)
             {
                 return new BaseModel { data = ex, success = false };
-                
+
             }
         }
 
@@ -73,28 +73,28 @@ namespace EDS.Api.Controllers
             try
             {
 
-            // Get member with id including friends
-            var member = memberRepository.GetAll().Where(x=>x.Id==id).Include(x => x.MemberFriends).ThenInclude(e => e.Member2).Include(e => e.MemberFriendsOf).ThenInclude(e => e.Member1).FirstOrDefault();
-            
-            if (member == null)
-            {
-                return new BaseModel { success=false, message=" Member Not Found" };
-            }
+                // Get member with id including friends
+                var member = memberRepository.GetAll().Where(x => x.Id == id).Include(x => x.MemberFriends).ThenInclude(e => e.Member2).Include(e => e.MemberFriendsOf).ThenInclude(e => e.Member1).FirstOrDefault();
 
-            //Custom model to return friends pages links as well
-            var retMember = new MemberWithFriendsPagesLinks { Name= member.Name, Headings=member.Headings, PersonalWebAddress= member.PersonalWebAddress };
+                if (member == null)
+                {
+                    return new BaseModel { success = false, message = " Member Not Found" };
+                }
 
-            //Iterate to generate list of tuples for all friends websites links
-            foreach (var memberFriend in member.MemberFriends)
-            {
+                //Custom model to return friends pages links as well
+                var retMember = new MemberWithFriendsPagesLinks { Name = member.Name, Headings = member.Headings, PersonalWebAddress = member.PersonalWebAddress };
 
-                retMember.Links.Add(new Tuple<int,string, string>(memberFriend.Member2.Id,memberFriend.Member2.Name, memberFriend.Member2.PersonalWebAddress));
-          
-            }
+                //Iterate to generate list of tuples for all friends websites links
+                foreach (var memberFriend in member.MemberFriends)
+                {
 
-            
-            
-            return new BaseModel { data = retMember, success=true  };
+                    retMember.Links.Add(new Tuple<int, string, string>(memberFriend.Member2.Id, memberFriend.Member2.Name, memberFriend.Member2.PersonalWebAddress));
+
+                }
+
+
+
+                return new BaseModel { data = retMember, success = true };
 
 
             }
@@ -102,13 +102,13 @@ namespace EDS.Api.Controllers
             {
                 return new BaseModel { data = ex, success = false };
             }
-            
+
 
         }
 
-        
 
-       
+
+
 
         [HttpPost("Create")]
         public async Task<BaseModel> Create(ApiModels.Member member)
@@ -117,60 +117,60 @@ namespace EDS.Api.Controllers
             try
             {
 
-            if (ModelState.IsValid)
-            {
-                // Get heading for profile
-                var headings = WebScraping.GetHeadings(member.PersonalWebAddress);
-                
-                var newMember = new Domain.Models.Member
+                if (ModelState.IsValid)
                 {
-                    Name = member.Name,
-                    PersonalWebAddress = member.PersonalWebAddress,
-                    Headings = headings
+                    // Get heading for profile
+                    var headings = WebScraping.GetHeadings(member.PersonalWebAddress);
 
-                };
+                    var newMember = new Domain.Models.Member
+                    {
+                        Name = member.Name,
+                        PersonalWebAddress = member.PersonalWebAddress,
+                        Headings = headings
 
-                var result=await memberRepository.Insert(newMember);
-               
-                return new BaseModel { data= result, message = "Member Created", success = true };
-            }
+                    };
 
-            else 
-            {
-                return new BaseModel { data = null, message = "Invalid data", success = false };
-            }
+                    var result = await memberRepository.Insert(newMember);
+
+                    return new BaseModel { data = result, message = "Member Created", success = true };
+                }
+
+                else
+                {
+                    return new BaseModel { data = null, message = "Invalid data", success = false };
+                }
             }
             catch (Exception ex)
             {
-                return new BaseModel { data=ex, success=false };
+                return new BaseModel { data = ex, success = false };
             }
 
 
         }
 
         [HttpGet("{id}/{topic}")]
-        public async Task<BaseModel> ExpertSearch(int id,string topic)
+        public async Task<BaseModel> ExpertSearch(int id, string topic)
         {
             try
             {
 
-            //Get all members who are not friends
-            var notFriends = friendRepository.GetAll().Include(x=>x.Member1).ThenInclude(x=>x.MemberFriends).Include(x=>x.Member2).ThenInclude(x=>x.MemberFriendsOf).Where(x => x.Member1Id != id && x.Member2Id != id).ToList();
-                if (notFriends.Count() > 0) 
+                //Get all members who are not friends
+                var notFriends = friendRepository.GetAll().Include(x => x.Member1).ThenInclude(x => x.MemberFriends).Include(x => x.Member2).ThenInclude(x => x.MemberFriendsOf).Where(x => x.Member1Id != id && x.Member2Id != id).ToList();
+                if (notFriends.Count() > 0)
                 {
-                 
-                    
+
+
                     int experrtId = 0;
                     string dispHeading = string.Empty;
 
                     //Get expert MemberId
-                    if(!string.IsNullOrEmpty(topic))
-                      experrtId =  FindExpert(notFriends, topic, out dispHeading);
+                    if (!string.IsNullOrEmpty(topic))
+                        experrtId = FindExpert(notFriends, topic, out dispHeading);
 
 
 
                     ////        Approach 1- When 1 degree separation between member and expert as given in document Alan --> Bart --> Claudia /////
-                   
+
 
                     ////If expert exist with topic
                     //if (!string.IsNullOrEmpty(dispHeading))
@@ -199,30 +199,30 @@ namespace EDS.Api.Controllers
 
                         string pathToRet = GetPathFromExpertToMember(experrtId, id, dispHeading);
 
-                        if (!string.IsNullOrEmpty(pathToRet)) 
+                        if (!string.IsNullOrEmpty(pathToRet))
                         {
-                            return new BaseModel { data=pathToRet, message="Path found", success=true };
-                        
+                            return new BaseModel { data = pathToRet, message = "Path found", success = true };
+
                         }
                         else
                         {
-                            return new BaseModel {message="Sorry no friendship chain available", success=false };
+                            return new BaseModel { message = "Sorry no friendship chain available", success = false };
                         }
-                   
+
 
 
                     }
 
                     else
                     {
-                        return new BaseModel { message="No expert found", success=false };
+                        return new BaseModel { message = "No expert found", success = false };
                     }
-                   
+
                 }
 
                 else
                 {
-                    return new BaseModel { message="No other friends available", success=false };
+                    return new BaseModel { message = "No other friends available", success = false };
                 }
 
 
@@ -232,39 +232,39 @@ namespace EDS.Api.Controllers
                 return new BaseModel { data = ex, success = false };
             }
         }
-        public int FindExpert(IEnumerable<Friend> friends,string topic, out string dispHeading) 
+        public int FindExpert(IEnumerable<Friend> friends, string topic, out string dispHeading)
         {
             try
             {
 
-            int expertId = 0;
-            //Iterate all non-friend and find expert
-            foreach (var notFriend in friends)
-            {
-               
-                if (notFriend.Member1.Headings.Split(',').Contains(topic))
+                int expertId = 0;
+                //Iterate all non-friend and find expert
+                foreach (var notFriend in friends)
                 {
-                    var headings = notFriend.Member1.Headings.Split(',');
-                    foreach (var heading in headings)
-                    {
-                        if (heading.Contains(topic))
-                        {
-                            dispHeading = heading;
 
-                            expertId = notFriend.Member1.Id;
-                            return expertId;
+                    if (notFriend.Member1.Headings.Split(',').Contains(topic))
+                    {
+                        var headings = notFriend.Member1.Headings.Split(',');
+                        foreach (var heading in headings)
+                        {
+                            if (heading.Contains(topic))
+                            {
+                                dispHeading = heading;
+
+                                expertId = notFriend.Member1.Id;
+                                return expertId;
+                            }
+
+
                         }
 
-                        
                     }
-                    
+
+
+
                 }
-
-                
-
-            }
-            dispHeading = string.Empty;
-            return expertId;
+                dispHeading = string.Empty;
+                return expertId;
 
             }
             catch (Exception)
@@ -275,15 +275,15 @@ namespace EDS.Api.Controllers
 
         }
 
-        public string GetPathFromExpertToMember(int expertId,int memberId, string dispHeading) 
+        public string GetPathFromExpertToMember(int expertId, int memberId, string dispHeading)
         {
 
             try
             {
-            
-            StringBuilder sb = new StringBuilder();
-            var pathList = new List<Domain.Models.Member>();
-           
+
+                StringBuilder sb = new StringBuilder();
+                var pathList = new List<Domain.Models.Member>();
+
                 var expert = memberRepository.GetByIdAsync(expertId).Result;
 
                 //A list to act as global for the extension method for finding descendants(friends) it will insure that their is no cycle of friendship being added
@@ -299,9 +299,9 @@ namespace EDS.Api.Controllers
                     pathList.Add(f);
                     if (f.MemberFriends.Any(x => x.Member2Id == memberId))
                     {
-                    // Add member to list as well
-                    var member = memberRepository.GetByIdAsync(memberId).Result;
-                    pathList.Add(member);
+                        // Add member to list as well
+                        var member = memberRepository.GetByIdAsync(memberId).Result;
+                        pathList.Add(member);
                         possiblePath = true;
                         break;
                     }
@@ -317,7 +317,7 @@ namespace EDS.Api.Controllers
                     }
 
                     //Remove last -->
-                    sb.Length=sb.Length-3;
+                    sb.Length = sb.Length - 3;
                     sb.Append("(" + dispHeading + ")");
 
                     return sb.ToString();
