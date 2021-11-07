@@ -30,7 +30,6 @@ namespace EDS.Api.Controllers
             try
             {
 
-            
             if (ModelState.IsValid)
             {
                 //Adding two records for each friendship

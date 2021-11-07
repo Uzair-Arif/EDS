@@ -117,7 +117,6 @@ namespace EDS.Api.Controllers
             try
             {
 
-            
             if (ModelState.IsValid)
             {
                 // Get heading for profile
@@ -235,6 +234,9 @@ namespace EDS.Api.Controllers
         }
         public int FindExpert(IEnumerable<Friend> friends,string topic, out string dispHeading) 
         {
+            try
+            {
+
             int expertId = 0;
             //Iterate all non-friend and find expert
             foreach (var notFriend in friends)
@@ -264,15 +266,20 @@ namespace EDS.Api.Controllers
             dispHeading = string.Empty;
             return expertId;
 
+            }
+            catch (Exception)
+            {
+                dispHeading = string.Empty;
+                return 0;
+            }
+
         }
 
         public string GetPathFromExpertToMember(int expertId,int memberId, string dispHeading) 
         {
 
-
             try
             {
-
             
             StringBuilder sb = new StringBuilder();
             var pathList = new List<Domain.Models.Member>();

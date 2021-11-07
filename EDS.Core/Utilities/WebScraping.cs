@@ -12,11 +12,9 @@ namespace EDS.Core.Utilities
     {
         public static string GetHeadings(string webAddress)
         {
-
             try
             {
 
-            
             if (Uri.IsWellFormedUriString(webAddress, UriKind.Absolute))
             {
                 var response = CallUrl(webAddress).Result;
@@ -34,10 +32,10 @@ namespace EDS.Core.Utilities
                 return string.Empty;
             }
             }
-            catch (Exception ex)
+            catch (Exception )
             {
 
-                return ex.ToString();
+                return null;
             }
         }
 
@@ -45,18 +43,16 @@ namespace EDS.Core.Utilities
         {
             try
             {
-
-            
             HttpClient client = new HttpClient();
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls13;
             client.DefaultRequestHeaders.Accept.Clear();
-            var response = client.GetStringAsync("https://www.c-sharpcorner.com/forums/systemmissingmethodexception-method-not-found");
+            var response = client.GetStringAsync(fullUrl);
             return await response;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
 
-                return ex.ToString();
+                return null;
             }
         }
 
@@ -66,7 +62,6 @@ namespace EDS.Core.Utilities
             try
             {
 
-            
             HtmlDocument htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(html);
 
@@ -96,10 +91,10 @@ namespace EDS.Core.Utilities
             }
 
             }
-            catch (Exception ex)
+            catch (Exception)
             {
 
-               return ex.ToString();
+                return null;
             }
         }
     }
