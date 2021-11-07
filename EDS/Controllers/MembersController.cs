@@ -16,7 +16,7 @@ using System.Text;
 namespace EDS.Api.Controllers
 {
     [Route("api/[controller]")]
-    [ApiController]
+   // [ApiController]
     public class MembersController : ControllerBase
     {
         private readonly IGenericRepository<Domain.Models.Member> memberRepository = null;
@@ -156,53 +156,69 @@ namespace EDS.Api.Controllers
             {
 
             //Get all members who are not friends
-            var notFriends = friendRepository.GetAll().Include(x=>x.Member1).Include(x=>x.Member2).Where(x => x.Member1Id != id && x.Member2Id != id).ToList();
+            var notFriends = friendRepository.GetAll().Include(x=>x.Member1).ThenInclude(x=>x.MemberFriends).Include(x=>x.Member2).ThenInclude(x=>x.MemberFriendsOf).Where(x => x.Member1Id != id && x.Member2Id != id).ToList();
                 if (notFriends.Count() > 0) 
                 {
                  
-                    StringBuilder sb = new StringBuilder();
+                    
                     int experrtId = 0;
                     string dispHeading = string.Empty;
 
-                    //Iterate all non-friend and find experts
-                    foreach (var notFriend in notFriends)
+                    //Get expert MemberId
+                    if(!string.IsNullOrEmpty(topic))
+                      experrtId =  FindExpert(notFriends, topic, out dispHeading);
+
+
+
+                    ////        Approach 1- When 1 degree separation between member and expert as given in document Alan --> Bart --> Claudia /////
+                   
+
+                    ////If expert exist with topic
+                    //if (!string.IsNullOrEmpty(dispHeading))
+                    //{
+                    //    StringBuilder sb = new StringBuilder();
+                    //    var memberFriend = friendRepository.GetAll().Where(x => x.Member1Id == id && (x.Member2.MemberFriends.Any(x => x.Member2Id == experrtId)) == true).FirstOrDefault();
+                    //    var memberName = memberRepository.GetByIdAsync(id).Result.Name;
+                    //    var expertName = memberRepository.GetByIdAsync(experrtId).Result.Name;
+
+                    //    var retPath = sb.Append(memberName + "-->" + memberFriend.Member2.Name + "-->" + expertName + "(" + dispHeading + ")").ToString();
+                    //    return new BaseModel { data = retPath, message = "Path to topic expert", success = true };
+
+
+                    //}
+                    //else
+                    //{
+                    //    return new BaseModel { message = "No expert available", success = false };
+                    //}
+
+
+
+                    ///////////////////// Approach 2 if n degree of separation between member and expert e.g Alan-->Bart-->Nick-->Claudia  ////////////////
+                    //Will enter the searching mechanism only if topic expert is available
+                    if (experrtId > 0 && !string.IsNullOrEmpty(dispHeading))
                     {
 
-                        if (notFriend.Member1.Headings.Split(',').Contains(topic))
+                        string pathToRet = GetPathFromExpertToMember(experrtId, id, dispHeading);
+
+                        if (!string.IsNullOrEmpty(pathToRet)) 
                         {
-                            var headings = notFriend.Member1.Headings.Split(',');
-                            foreach (var heading in headings)
-                            {
-                                if (heading.Contains(topic))
-                                {
-                                    dispHeading = heading;
-
-                                    experrtId = notFriend.Member1.Id;
-                                }
-                               
-                                break;
-                            }
-                            break;
+                            return new BaseModel { data=pathToRet, message="Path found", success=true };
+                        
                         }
-
-                    }
-
-                    //If expert exist with topic
-                    if (!string.IsNullOrEmpty(dispHeading)) 
-                    {
-                        var memberFriend = friendRepository.GetAll().Where(x => x.Member1Id == id && (x.Member2.MemberFriends.Any(x => x.Member2Id == experrtId)) == true).FirstOrDefault();
-                        var memberName = memberRepository.GetByIdAsync(id).Result.Name;
-                        var expertName = memberRepository.GetByIdAsync(experrtId).Result.Name;
-
-                        var retPath = sb.Append(memberName + "-->" + memberFriend.Member2.Name + "-->" + expertName + "(" + dispHeading + ")").ToString();
-                        return new BaseModel { data = retPath, message = "Path to topic expert", success = true };
+                        else
+                        {
+                            return new BaseModel {message="Sorry no friendship chain available", success=false };
+                        }
+                   
 
 
                     }
+
                     else
                     {
-                        return new BaseModel { message = "No expert available", success = false };
+                        return new BaseModel { message="No expert found", success=false };
                     }
+                   
                 }
 
                 else
@@ -217,7 +233,100 @@ namespace EDS.Api.Controllers
                 return new BaseModel { data = ex, success = false };
             }
         }
-        
+        public int FindExpert(IEnumerable<Friend> friends,string topic, out string dispHeading) 
+        {
+            int expertId = 0;
+            //Iterate all non-friend and find expert
+            foreach (var notFriend in friends)
+            {
+               
+                if (notFriend.Member1.Headings.Split(',').Contains(topic))
+                {
+                    var headings = notFriend.Member1.Headings.Split(',');
+                    foreach (var heading in headings)
+                    {
+                        if (heading.Contains(topic))
+                        {
+                            dispHeading = heading;
+
+                            expertId = notFriend.Member1.Id;
+                            return expertId;
+                        }
+
+                        
+                    }
+                    
+                }
+
+                
+
+            }
+            dispHeading = string.Empty;
+            return expertId;
+
+        }
+
+        public string GetPathFromExpertToMember(int expertId,int memberId, string dispHeading) 
+        {
+
+
+            try
+            {
+
+            
+            StringBuilder sb = new StringBuilder();
+            var pathList = new List<Domain.Models.Member>();
+           
+                var expert = memberRepository.GetByIdAsync(expertId).Result;
+
+                //A list to act as global for the extension method for finding descendants(friends) it will insure that their is no cycle of friendship being added
+                //Hence once a member is marked as friend it will not be marked again and avoiding infinte looping
+                var membersList = new List<Domain.Models.Member>();
+
+                //Now we will track back from the expert upto member   
+                var friendIterator = FriendsExtension.GetFriends(expert, membersList);
+                bool possiblePath = false;
+                foreach (var f in friendIterator)
+                {
+
+                    pathList.Add(f);
+                    if (f.MemberFriends.Any(x => x.Member2Id == memberId))
+                    {
+                    // Add member to list as well
+                    var member = memberRepository.GetByIdAsync(memberId).Result;
+                    pathList.Add(member);
+                        possiblePath = true;
+                        break;
+                    }
+
+                }
+                // If path found from expert to member
+                if (possiblePath)
+                {
+                    //Reverse the list and fromat the output
+                    for (int i = pathList.Count - 1; i >= 0; i--)
+                    {
+                        sb.Append(pathList[i].Name + "-->");
+                    }
+
+                    //Remove last -->
+                    sb.Length=sb.Length-3;
+                    sb.Append("(" + dispHeading + ")");
+
+                    return sb.ToString();
+
+                }
+
+
+            }
+            catch (Exception ex)
+            {
+                // Log exception here
+            }
+
+
+            return string.Empty;
+        }
 
     }
 }
