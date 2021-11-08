@@ -13,7 +13,7 @@ namespace EDS.Security
     public class JWTAuthenticationManager : IJWTAuthenticationManager
     {
 
-        private readonly SignInManager<IdentityUser> signInManager;
+       
         IDictionary<string, string> users = new Dictionary<string, string>
         {
             { "test1", "password1" },
@@ -22,17 +22,17 @@ namespace EDS.Security
 
         private readonly string tokenKey;
 
-        public JWTAuthenticationManager(string tokenKey, SignInManager<IdentityUser> signInManager)
+        public JWTAuthenticationManager(string tokenKey)
         {
             this.tokenKey = tokenKey;
-            this.signInManager = signInManager;
+            
         }
 
-        public async Task<string> Authenticate(string email, string password, bool rememberMe)
+        public async Task<string> Authenticate(SignInManager<IdentityUser> signInManager, string username, string password, bool rememberMe)
         {
 
             var result = await signInManager.PasswordSignInAsync(
-                    email, password, rememberMe, false);
+                    username, password, rememberMe, false);
 
             if (!result.Succeeded)
             {
@@ -46,7 +46,7 @@ namespace EDS.Security
             {
                 Subject = new ClaimsIdentity(new Claim[]
                 {
-                    new Claim(ClaimTypes.Name, email)
+                    new Claim(ClaimTypes.Name, username)
                 }),
                 Expires = DateTime.UtcNow.AddHours(1),
                 SigningCredentials = new SigningCredentials(

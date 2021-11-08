@@ -24,11 +24,11 @@ namespace EDS
     public class Startup
     {
 
-        private readonly SignInManager<IdentityUser> signInManager;
-        public Startup(IConfiguration configuration, SignInManager<IdentityUser> signInManager)
+     
+        public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
-            this.signInManager = signInManager;
+          
         }
 
         public IConfiguration Configuration { get; }
@@ -64,7 +64,7 @@ namespace EDS
                 };
             });
 
-            services.AddSingleton<IJWTAuthenticationManager>(new JWTAuthenticationManager(tokenKey, signInManager));
+            services.AddSingleton<IJWTAuthenticationManager>(new JWTAuthenticationManager(tokenKey));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

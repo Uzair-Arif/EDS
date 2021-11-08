@@ -102,7 +102,8 @@ namespace EDS.Api.Controllers
             if (ModelState.IsValid)
             {
 
-                var token=jWTAuthenticationManager.Authenticate(model.Email, model.Password,model.RememberMe);
+
+                var token=jWTAuthenticationManager.Authenticate(signInManager,model.Email, model.Password,model.RememberMe);
 
                 if (token == null) 
                 {
