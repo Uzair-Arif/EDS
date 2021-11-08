@@ -153,7 +153,12 @@ namespace EDS.Api.Controllers
         {
             try
             {
+                var member = await memberRepository.GetByIdAsync(id);
 
+                if (member == null)
+                {
+                    return new BaseModel { success = false, message = " Member Not Found" };
+                }
                 //Get all members who are not friends
                 var notFriends = friendRepository.GetAll().Include(x => x.Member1).ThenInclude(x => x.MemberFriends).Include(x => x.Member2).ThenInclude(x => x.MemberFriendsOf).Where(x => x.Member1Id != id && x.Member2Id != id).ToList();
                 if (notFriends.Count() > 0)

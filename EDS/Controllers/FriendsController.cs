@@ -17,9 +17,11 @@ namespace EDS.Api.Controllers
     public class FriendsController : ControllerBase
     {
         private readonly IGenericRepository<Friend> friendRepository = null;
-        public FriendsController(IGenericRepository<Friend> friendRepository)
+        private readonly IGenericRepository<Domain.Models.Member> memberRepository = null;
+        public FriendsController(IGenericRepository<Domain.Models.Member> memberRepository, IGenericRepository<Friend>friendRepository)
         {
             this.friendRepository = friendRepository;
+            this.memberRepository = memberRepository;
         }
 
 
@@ -32,6 +34,19 @@ namespace EDS.Api.Controllers
 
                 if (ModelState.IsValid)
                 {
+
+                    var member1 = await memberRepository.GetByIdAsync(friend.Member1Id);
+
+                    if (member1 == null)
+                    {
+                        return new BaseModel { success = false, message = " Member1 Not Found" };
+                    }
+                    var member2 = await memberRepository.GetByIdAsync(friend.Member2Id);
+
+                    if (member2 == null)
+                    {
+                        return new BaseModel { success = false, message = " Member2 Not Found" };
+                    }
                     //Adding two records for each friendship
                     //1st friendship
                     var newFriendship1 = new Domain.Models.Friend
