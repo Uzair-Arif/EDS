@@ -10,8 +10,11 @@ namespace EDS.Domain.Models
     {
         public Member Member1 { get; set; }
         public Member Member2 { get; set; }
+
+        [ForeignKey("Member")]
         public int Member1Id { get; set; }
-       
+
+        [ForeignKey("Member")]
         public int Member2Id { get; set; }
       
         
